@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Топ продаж</title>
+</head>
+<body>
+    <h1>Топ продаж</h1>
+    <form method="POST" action="{{ url_for('admin.analytics_top_sales') }}">
+        <label for="start_date">Дата начала:</label>
+        <input type="date" id="start_date" name="start_date" required>
+        
+        <label for="end_date">Дата конца:</label>
+        <input type="date" id="end_date" name="end_date" required>
+
+        <label for="limit">Количество записей:</label>
+        <input type="number" id="limit" name="limit" value="10" min="1">
+
+        <button type="submit">Показать</button>
+    </form>
+
+    {% if top_sales %}
+    <table>
+        <thead>
+            <tr>
+                <th>Товар</th>
+                <th>Количество продаж</th>
+                <th>Выручка</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in top_sales %}
+            <tr>
+                <td>{{ sale.product_name }}</td>
+                <td>{{ sale.total_quantity_sold }}</td>
+                <td>{{ sale.total_revenue }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Нет данных для отображения.</p>
+    {% endif %}
+</body>
+</html>

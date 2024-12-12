@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Аналитика</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #343a40;
+            color: #fff;
+            padding: 1rem;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header nav a {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 1rem;
+        }
+
+        header nav a:hover {
+            text-decoration: underline;
+        }
+
+        main {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: auto;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .form-container {
+            margin-bottom: 2rem;
+            background: #e9ecef;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .form-container label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .form-container input,
+        .form-container select,
+        .form-container button {
+            margin-right: 10px;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .form-container button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .form-container button:hover {
+            background-color: #0056b3;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: 2rem;
+            border-bottom: 2px solid #ccc;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            background: #f8f9fa;
+        }
+
+        .tab.active {
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        table th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .no-data {
+            text-align: center;
+            margin-top: 2rem;
+            color: #6c757d;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Аналитика</h1>
+        <nav>
+            <a href="{{ url_for('main.home') }}">Главная</a>
+            <a href="{{ url_for('admin.admin_dashboard') }}">Админка</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="form-container">
+            <form method="GET" action="{{ url_for('admin.analytics_dashboard') }}">
+                <label for="start_date">Дата начала:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                
+                <label for="end_date">Дата конца:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                
+                <label for="group_by">Группировка:</label>
+                <select id="group_by" name="group_by">
+                    <option value="day" {% if group_by == 'day' %}selected{% endif %}>По дням</option>
+                    <option value="month" {% if group_by == 'month' %}selected{% endif %}>По месяцам</option>
+                </select>
+                
+                <button type="submit">Показать</button>
+            </form>            
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="top-sales">Топ продаж</div>
+            <div class="tab" data-tab="revenue">Выручка</div>
+            <div class="tab" data-tab="reviews">Отзывы</div>
+        </div>
+
+        <div id="top-sales" class="tab-content active">
+            <h3>Топ продаж</h3>
+            {% if top_sales %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Количество продаж</th>
+                        <th>Выручка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in top_sales %}
+                    <tr>
+                        <td>{{ sale.product_name }}</td>
+                        <td>{{ sale.total_quantity_sold }}</td>
+                        <td>{{ sale.total_revenue }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="no-data">Нет данных для отображения.</p>
+            {% endif %}
+        </div>
+
+        <div id="revenue" class="tab-content">
+            <h3>Выручка</h3>
+            {% if revenue %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Период</th>
+                        <th>Выручка</th>
+                        <th>Количество проданных товаров</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in revenue %}
+                    <tr>
+                        <td>{{ row.period }}</td>
+                        <td>{{ row.total_revenue }}</td>
+                        <td>{{ row.total_items_sold }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="no-data">Нет данных для отображения.</p>
+            {% endif %}
+        </div>
+
+        <div id="reviews" class="tab-content">
+            <h3>Отзывы по категориям</h3>
+            {% if reviews_by_category %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Категория</th>
+                        <th>Средний рейтинг</th>
+                        <th>Количество отзывов</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in reviews_by_category %}
+                    <tr>
+                        <td>{{ row.category_name }}</td>
+                        <td>{{ row.average_rating }}</td>
+                        <td>{{ row.total_reviews }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="no-data">Нет данных для отображения.</p>
+            {% endif %}
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    contents.forEach(c => c.classList.remove('active'));
+
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

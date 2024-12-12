@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Выручка по месяцам</title>
+</head>
+<body>
+    <h1>Выручка по месяцам</h1>
+    <form method="POST" action="{{ url_for('admin.analytics_revenue_by_month') }}">
+        <label for="start_date">Дата начала:</label>
+        <input type="date" id="start_date" name="start_date" required>
+        
+        <label for="end_date">Дата конца:</label>
+        <input type="date" id="end_date" name="end_date" required>
+
+        <button type="submit">Показать</button>
+    </form>
+
+    {% if monthly_revenue %}
+    <table>
+        <thead>
+            <tr>
+                <th>Месяц</th>
+                <th>Выручка</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in monthly_revenue %}
+            <tr>
+                <td>{{ row.month }}</td>
+                <td>{{ row.total_revenue }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Нет данных для отображения.</p>
+    {% endif %}
+</body>
+</html>

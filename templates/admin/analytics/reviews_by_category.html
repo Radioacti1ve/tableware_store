@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Отзывы по категориям</title>
+</head>
+<body>
+    <h1>Отзывы по категориям</h1>
+
+    {% if reviews_by_category %}
+    <table>
+        <thead>
+            <tr>
+                <th>Категория</th>
+                <th>Средний рейтинг</th>
+                <th>Количество отзывов</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in reviews_by_category %}
+            <tr>
+                <td>{{ row.category_name }}</td>
+                <td>{{ row.average_rating }}</td>
+                <td>{{ row.total_reviews }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Нет данных для отображения.</p>
+    {% endif %}
+</body>
+</html>
