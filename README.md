@@ -10,7 +10,6 @@
      sudo apt update
      sudo apt install postgresql postgresql-contrib
      ```
-   - На **Windows** или **macOS** скачайте установщик с [официального сайта PostgreSQL](https://www.postgresql.org/).
 
 2. Убедитесь, что PostgreSQL работает:
    ```bash
