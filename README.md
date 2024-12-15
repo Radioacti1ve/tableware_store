@@ -115,28 +115,6 @@ SECRET_KEY=your_secret_key
    pip install python-dotenv
    ```
 
-2. Добавьте в ваш Python-код чтение `.env`:
-   ```python
-   from dotenv import load_dotenv
-   import os
-
-   # Загрузка переменных из .env
-   load_dotenv()
-
-   # Пример доступа к переменным
-   db_host = os.getenv("DB_HOST")
-   db_port = os.getenv("DB_PORT")
-   db_name = os.getenv("DB_NAME")
-   db_user = os.getenv("DB_USER")
-   db_password = os.getenv("DB_PASSWORD")
-   ```
-
-   Тебе это врятли понадобится, но на всякий
-
----
-
-
-
 
 Ниже приведены реализации представления, триггера и функции в PostgreSQL.
 Все уже написано в schema.sql. Нужно просто дообновить базу данных.
