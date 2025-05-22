@@ -3,18 +3,44 @@ from app.db import *
 import bcrypt
 import logging
 from quart import g
+from app.auth_token_utils import store_token, get_user_by_token, delete_token
+from app.cache_utils import get_or_cache_json
+from app.pubsub import publish_event
+from app.redis_client import get_redis
+import json
 
 logger = logging.getLogger(__name__)
 main = Blueprint("main", __name__)
 
 @main.before_app_request
 async def load_user_roles():
-    user_id = session.get('user_id')
-    if user_id:
-        g.user_roles = await get_user_roles(current_app.db_pool, user_id)
+    token = session.get("auth_token")
+    user_id = session.get("user_id")
+
+    # Проверка токена через Redis
+    if token:
+        redis_user_id = await get_user_by_token(token)
+        if not redis_user_id or redis_user_id != user_id:
+            # Токен невалиден — принудительно выходим
+            session.pop("user_id", None)
+            session.pop("auth_token", None)
+            g.user_roles = []
+            return  # пропускаем дальнейшие проверки
+    elif user_id:
+        # Нет токена, но есть user_id — тоже невалидно
+        session.pop("user_id", None)
+        g.user_roles = []
+        return
     else:
         g.user_roles = []
+        return
 
+    # Если всё ок — загружаем роли
+    try:
+        g.user_roles = await get_user_roles(current_app.db_pool, user_id)
+    except Exception as e:
+        # БД может быть отключена — для Redis-страниц пропускаем
+        g.user_roles = []
 
 @main.route("/", methods=["GET"])
 async def home():
@@ -26,8 +52,10 @@ async def home():
         category_id = request.args.get('category', '')
         manufacturer = request.args.get('manufacturer', '').strip()
 
-        categories = await get_all_categories(current_app.db_pool)
-        manufacturers = await get_all_manufacturers(current_app.db_pool)
+        #categories = await get_all_categories(current_app.db_pool)
+        categories = await get_or_cache_json("cache:categories", lambda: get_all_categories(current_app.db_pool))
+        #manufacturers = await get_all_manufacturers(current_app.db_pool)
+        manufacturers = await get_or_cache_json("cache:manufacturers", lambda: get_all_manufacturers(current_app.db_pool))
 
         products = await search_products(
             current_app.db_pool,
@@ -51,8 +79,7 @@ async def home():
     except Exception as e:
         logger.error(f"Ошибка при загрузке главной страницы: {e}")
         return f"Ошибка при загрузке главной страницы: {e}", 500
-
-
+    
 @main.route("/profile")
 async def profile():
     """
@@ -161,6 +188,11 @@ async def login():
         # Успешный вход
         logger.info(f"Пользователь {email} успешно авторизовался.")
         session["user_id"] = str(user["user_id"])  # Используем session для сохранения user_id
+
+        token = str(uuid.uuid4())
+        await store_token(token, str(user["user_id"]))
+        session["auth_token"] = token
+
         await flash(f"Добро пожаловать, {user['username']}!", "success")
         return redirect(url_for("main.home"))  # Перенаправляем на главную страницу после авторизации
 
@@ -173,7 +205,13 @@ async def logout():
     Выход из системы.
     """
     logger.info("Пользователь вышел из системы.")
+    token = session.get("auth_token")
+
+    if token:
+        await delete_token(token)  
+    
     session.pop("user_id", None)
+    session.pop("auth_token", None)
     await flash("Вы вышли из системы.", "info")
     return redirect(url_for("main.login"))
 
@@ -239,6 +277,10 @@ async def place_order():
 
     try:
         await process_order(current_app.db_pool, user_id)
+        await publish_event("orders", {
+            "type": "new_order",
+            "user_id": user_id
+        })
         await flash("Заказ успешно оформлен!", "success")
     except Exception as e:
         logger.error(f"Ошибка при оформлении заказа: {e}")
@@ -371,7 +413,12 @@ async def product_page(product_id):
         return redirect(url_for("main.product_page", product_id=product_id))
 
     try:
-        product = await get_product_by_id(current_app.db_pool, product_id)
+        # product = await get_product_by_id(current_app.db_pool, product_id)
+        product = await get_or_cache_json(
+            f"cache:product:{product_id}",
+            lambda: get_product_by_id(current_app.db_pool, product_id),
+            ttl=600
+        )
         if not product:
             await flash("Товар не найден.", "danger")
             return redirect(url_for("main.home"))
@@ -382,3 +429,51 @@ async def product_page(product_id):
         logger.error(f"Ошибка при загрузке страницы товара: {e}")
         await flash("Произошла ошибка при загрузке страницы товара.", "danger")
         return redirect(url_for("main.home"))
+
+@main.route("/cache")
+async def demo_cache_only():
+    """
+    Демонстрация работы кеша без доступа к PostgreSQL.
+    Открывает данные только из Redis.
+    """
+
+    # Асинхронные fallback-функции
+    async def empty_list():
+        return []
+
+    async def empty_dict():
+        return {}
+
+    try:
+        # Забираем категории и производителей из кеша
+        categories = await get_or_cache_json("cache:categories", empty_list)
+        manufacturers = await get_or_cache_json("cache:manufacturers", empty_list)
+
+        # Пример продукта — заранее прогретый
+        hardcoded_product_id = "2ff0b2cb-5592-4b3b-9983-1597b294c890"
+        product = await get_or_cache_json(
+            f"cache:product:{hardcoded_product_id}",
+            empty_dict,
+            ttl=600
+        )
+
+        return await render_template(
+            "demo_cache.html",
+            categories=categories,
+            manufacturers=manufacturers,
+            product=product
+        )
+    except Exception as e:
+        return f"Ошибка (скорее всего Redis недоступен): {e}", 500
+
+@main.route("/logs")
+async def session_log():
+    user_id = session.get("user_id")
+    if not user_id:
+        return "Not authorized", 401
+
+    r = await get_redis()
+    logs = await r.lrange(f"session_log:{user_id}", 0, -1)
+    parsed_logs = [json.loads(entry) for entry in logs]
+
+    return await render_template("session_log.html", logs=parsed_logs)

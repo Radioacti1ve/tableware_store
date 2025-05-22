@@ -1,21 +1,20 @@
 from quart import Quart
 from dotenv import load_dotenv
+from .redis_client import init_redis
+from .pubsub import listen_to_orders
 import asyncpg
 import os
 import logging
 from datetime import timedelta
 
-# Логирование
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Загрузка переменных окружения
 load_dotenv()
 
 def create_app():
     app = Quart(__name__, template_folder="../templates", static_folder="../static")
 
-    # Настройки приложения
     app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
 
     @app.before_serving
@@ -37,6 +36,14 @@ def create_app():
         except Exception as e:
             logger.error(f"Ошибка при создании пула соединений: {e}")
             raise e
+        
+        try:
+            await init_redis()
+            logger.info("Подключение к Redis установлено.")
+            app.add_background_task(listen_to_orders)
+        except Exception as e:
+            logger.error(f"Ошибка при подключении к Redis: {e}")
+            raise e
 
     @app.after_serving
     async def shutdown():
@@ -49,14 +56,11 @@ def create_app():
         except Exception as e:
             logger.error(f"Ошибка при закрытии пула соединений: {e}")
 
-    # Импортируем Blueprints
     from .routes import main as main_blueprint
     from .admin_routes import admin as admin_blueprint
 
-    # Регистрируем Blueprints
     app.register_blueprint(main_blueprint)
     app.register_blueprint(admin_blueprint)
-    app.permanent_session_lifetime = timedelta(minutes=30)  # Сессия истечет через 30 минут
-
+    app.permanent_session_lifetime = timedelta(minutes=30)  
 
     return app

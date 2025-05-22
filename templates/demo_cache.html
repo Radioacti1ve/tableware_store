@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Демо Redis Cache</title>
+</head>
+<body>
+    <h1>📦 Данные из Redis Cache</h1>
+
+    <h2>Категории:</h2>
+    <ul>
+        {% for cat in categories %}
+            <li>{{ cat.name }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Производители:</h2>
+    <ul>
+        {% for man in manufacturers %}
+            <li>{{ man }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Продукт:</h2>
+    {% if product %}
+        <strong>{{ product.name }}</strong><br>
+        Цена: {{ product.price }}<br>
+        На складе: {{ product.stock }}
+    {% else %}
+        <p>Продукт не найден в кеше</p>
+    {% endif %}
+</body>
+</html>

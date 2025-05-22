@@ -112,6 +112,8 @@ body {
 
 /* Шапка */
 .main-header {
+    position: fixed;
+    top: 0;
     background: #007bff;
     color: white;
     padding: 1rem 0;

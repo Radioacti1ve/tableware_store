@@ -120,8 +120,6 @@ async def get_cart_items(pool: asyncpg.pool.Pool, user_id: str):
             WHERE user_id = $1
         """, user_id)
 
-
-
 async def remove_from_cart(pool: asyncpg.pool.Pool, user_id: str, product_id: str):
     """
     Удалить товар из корзины пользователя.
@@ -223,15 +221,6 @@ async def update_order_status(pool, order_id, new_status):
         await conn.execute("""
             UPDATE orders SET status = $1 WHERE order_id = $2
         """, new_status, order_id)
-
-async def get_product_by_id(pool: asyncpg.pool.Pool, product_id: str):
-    """
-    Получить информацию о продукте по его ID.
-    """
-    async with pool.acquire() as conn:
-        return await conn.fetchrow("""
-            SELECT * FROM products WHERE product_id = $1
-        """, product_id)
 
 async def add_review(pool: asyncpg.pool.Pool, product_id: str, user_id: str, rating: int, comment: str):
     """

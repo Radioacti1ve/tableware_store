@@ -7,3 +7,4 @@ alembic             # Для миграций
 psycopg2-binary
 Faker
 tqdm
+redis>=4.5.0

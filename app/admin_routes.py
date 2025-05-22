@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import glob
 from datetime import datetime
 import subprocess
+from app.pubsub import publish_event
 
 admin = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -73,12 +74,18 @@ async def manage_orders():
         order_id = form.get('order_id')
         new_status = form.get('status')
         await update_order_status(current_app.db_pool, order_id, new_status)
+        await publish_event("orders", {
+            "type": "status_changed",
+            "order_id": order_id,
+            "new_status": new_status
+        })
         await flash('Статус заказа обновлен.', 'success')
         return redirect(url_for('admin.manage_orders'))
 
     # GET-запрос: отображаем список заказов
     orders = await get_all_orders(current_app.db_pool)
     return await render_template('admin/manage_orders.html', orders=orders)
+
 
 @admin.route('/backup', methods=['GET'])
 @admin_required

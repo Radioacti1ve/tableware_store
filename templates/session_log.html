@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>История входов</title>
+</head>
+<body>
+    <h1>🛡️ История входов пользователя</h1>
+    <table border="1">
+        <tr>
+            <th>Время</th>
+            <th>IP</th>
+            <th>Token</th>
+        </tr>
+        {% for entry in logs %}
+        <tr>
+            <td>{{ entry.timestamp }}</td>
+            <td>{{ entry.ip }}</td>
+            <td>{{ entry.token }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
